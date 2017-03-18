@@ -1,0 +1,2 @@
+1. Phone number : Get the phone number for a partner.
+2. multi scraping : Create pool of threads to work on different pages on the same time to reduce the time.
