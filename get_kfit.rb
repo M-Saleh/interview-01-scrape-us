@@ -4,6 +4,7 @@ require 'net/http'
 require 'nokogiri' 
 
 PARTNERS_URL = 'https://access.kfit.com/partners/'
+OUTPUT_FILENAME = 'kfit_partners.csv'
 
 # Return a Nokogiri object for a page.
 def get_page(page_url)
@@ -59,13 +60,27 @@ def get_partner_info(partner_page)
 	return info
 end
 
-def get_partner(partner_id)	
+def write_to_file(info_arr)
+	File.open(OUTPUT_FILENAME, 'w') { |file|
+		file.write("city, partner name, address, latitude, longitude, average rating\n")
+		info_arr.each do |info|
+			file.write("#{info['city']}, #{info['name']}, #{info['address']}, #{info['latitude']}, #{info['longitude']}, #{info['rating']}\n") 
+		end
+	}
+end
+
+def get_partner(partner_id)
+	puts "Working on partner : #{partner_id}"
 	partner_page = get_page(PARTNERS_URL+partner_id.to_s)
 	partner_info = get_partner_info(partner_page)
 	partner_info['rating'] = get_partner_rate(partner_page)
-	puts partner_info
+	return partner_info
 end
 
 partners_page = get_page(PARTNERS_URL)
 partners_elements = partners_page.xpath('//script[contains(text(),"kfitMap.outlets.push")]')
-partners_elements.each{|p| get_partner(get_partner_id(p))}
+info_arr = []
+partners_elements.each{|p| info_arr << get_partner(get_partner_id(p))}
+puts "Starting writing to file"
+write_to_file(info_arr)
+
