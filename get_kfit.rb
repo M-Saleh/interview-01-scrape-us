@@ -1,10 +1,13 @@
 # Assumption:If a partner not rated yet, will be give -1.
 
 require 'net/http'
-require 'nokogiri' 
+require 'nokogiri'
+require 'set'
 
 PARTNERS_URL = 'https://access.kfit.com/partners/'
 OUTPUT_FILENAME = 'kfit_partners.csv'
+# Used for discard the duplicates
+@partner_ids = Set.new
 
 # Return a Nokogiri object for a page.
 def get_page(page_url)
@@ -40,11 +43,11 @@ def get_partner_info(partner_page)
 			row = row.split(":").map{|r| r.strip}
 			case line_index
 			when 3
-				info['name'] = row[1].gsub(/[^0-9A-Za-z]/, '') # Remove all special chars
+				info['name'] = row[1].gsub(/[^0-9A-Za-z ]/, '') # Remove all special chars
 			when 4
-				info['address'] = row[1].gsub(/[^0-9A-Za-z]/, '')
+				info['address'] = row[1].gsub(/[^0-9A-Za-z ]/, '')
 			when 5
-				info['city'] = row[1].gsub(/[^0-9A-Za-z]/, '')
+				info['city'] = row[1].gsub(/[^0-9A-Za-z ]/, '')
 			when 6
 				location = row[1].scan(/\d+.\d+/)
 				info['latitude'] = location[0]
@@ -70,7 +73,13 @@ def write_to_file(info_arr)
 end
 
 def get_partner(partner_id)
-	puts "Working on partner : #{partner_id}"
+	@partners_remaining_count -=1
+	if @partner_ids.include?(partner_id)
+		puts "DUPLICATED, partner #{partner_id} is found before"
+		return nil
+	end
+	@partner_ids.add(partner_id)
+	puts "Working on partner : #{partner_id}, remaining #{@partners_remaining_count}"
 	partner_page = get_page(PARTNERS_URL+partner_id.to_s)
 	partner_info = get_partner_info(partner_page)
 	partner_info['rating'] = get_partner_rate(partner_page)
@@ -80,7 +89,11 @@ end
 partners_page = get_page(PARTNERS_URL)
 partners_elements = partners_page.xpath('//script[contains(text(),"kfitMap.outlets.push")]')
 info_arr = []
-partners_elements.each{|p| info_arr << get_partner(get_partner_id(p))}
-puts "Starting writing to file"
-write_to_file(info_arr)
+@partners_remaining_count = partners_elements.length
+partners_elements.each do |part_elem|
+	partner_info = get_partner(get_partner_id(part_elem))	
+	info_arr << partner_info if partner_info
+end
 
+puts "Writing to the output file"
+write_to_file(info_arr)
