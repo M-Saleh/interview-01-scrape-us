@@ -28,10 +28,42 @@ def get_partner_rate(partner_page)
 	return rate_node ? rate_node.text.to_f : -1
 end
 
+# Return city, partner_name, address, latitude, longitude.
+def get_partner_info(partner_page)
+	info_node = partner_page.xpath('//script[contains(text(),"var outlet_details")]')
+	if !info_node.empty?
+		info = {}
+		rows = info_node.first.text.split("\n")
+		line_index = 0
+		rows.each do |row|
+			row = row.split(":").map{|r| r.strip}
+			case line_index
+			when 3
+				info['name'] = row[1]
+			when 4
+				info['address'] = row[1]
+			when 5
+				info['city'] = row[1]
+			when 6
+				location = row[1].scan(/\d+.\d+/)
+				info['latitude'] = location[0]
+				info['longitude'] = location[1]
+			when line_index > 6
+				# Got all info, just break.
+				break
+			end
+			line_index += 1
+		end	
+	end
+
+	return info
+end
+
 def get_partner(partner_id)	
-	page = get_page(PARTNERS_URL+partner_id.to_s)	
-	rate = get_partner_rate(page)
-	puts rate
+	partner_page = get_page(PARTNERS_URL+partner_id.to_s)
+	partner_info = get_partner_info(partner_page)
+	partner_info['rating'] = get_partner_rate(partner_page)
+	puts partner_info
 end
 
 partners_page = get_page(PARTNERS_URL)
