@@ -40,11 +40,11 @@ def get_partner_info(partner_page)
 			row = row.split(":").map{|r| r.strip}
 			case line_index
 			when 3
-				info['name'] = row[1]
+				info['name'] = row[1].gsub(/[^0-9A-Za-z]/, '') # Remove all special chars
 			when 4
-				info['address'] = row[1]
+				info['address'] = row[1].gsub(/[^0-9A-Za-z]/, '')
 			when 5
-				info['city'] = row[1]
+				info['city'] = row[1].gsub(/[^0-9A-Za-z]/, '')
 			when 6
 				location = row[1].scan(/\d+.\d+/)
 				info['latitude'] = location[0]
